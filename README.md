@@ -15,6 +15,17 @@ NetICU sits in your menu bar and continuously measures the health of your connec
 - **Alert notifications** — get notified when a target degrades or goes down.
 - **Public IP display, recent logs, history clearing, calibration of quality thresholds.**
 
+## Installation
+
+Download `NetICU-1.4.0.zip` from the [Releases](https://github.com/aahonarmand/NetICU/releases) page, unzip it, and move `NetICU.app` to your Applications folder.
+
+> **First launch — "NetICU can't be opened":** the app is not yet notarized by Apple, so macOS Gatekeeper blocks it on first launch. To allow it:
+>
+> 1. **Right-click** (or Control-click) `NetICU.app` and choose **Open**, then click **Open** in the dialog, **or**
+> 2. Go to **System Settings → Privacy & Security**, scroll down to the message about NetICU, and click **Open Anyway**.
+>
+> This is only needed once. Alternatively, build from source (below) — apps you build yourself launch without this warning.
+
 ## Requirements
 
 - macOS 13 or later (per-monitor proxy requires macOS 14+)

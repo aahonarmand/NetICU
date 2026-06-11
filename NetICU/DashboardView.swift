@@ -105,7 +105,7 @@ struct DashboardView: View {
 
     // MARK: - محاسبه‌ی خلاصه
 
-    private struct Summary { var active: Int; var avgScore: Int; var worst: Int?; var best: Int? }
+    private struct Summary { var active: Int; var avgScore: Int; var worst: Int? }
 
     private var overallSummary: Summary {
         let active = vm.targets.filter { $0.isEnabled }
@@ -113,7 +113,7 @@ struct DashboardView: View {
             let s = vm.statistics(for: t); return s.sampleCount > 0 ? s.score : nil
         }
         let avg = scores.isEmpty ? 0 : Int((Double(scores.reduce(0, +)) / Double(scores.count)).rounded())
-        return Summary(active: active.count, avgScore: avg, worst: scores.min(), best: scores.max())
+        return Summary(active: active.count, avgScore: avg, worst: scores.min())
     }
 }
 
@@ -147,7 +147,7 @@ struct DashboardCard: View {
             }
 
             TrendChart(points: samples.pingPoints, color: stats.sampleCount > 0 ? stats.color : Theme.accent,
-                       decimals: 0, markLoss: true, height: 84, compact: true)
+                       markLoss: true, height: 84, compact: true)
         }
         .padding(14)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))

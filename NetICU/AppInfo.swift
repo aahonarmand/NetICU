@@ -3,11 +3,14 @@ import Foundation
 /// اطلاعات نسخه‌ی اپ — منبعِ واحد و قابل‌اعتماد (مستقل از تنظیمات پروژه‌ی Xcode).
 /// در هر به‌روزرسانی، `version` و `changelog` همین‌جا به‌روز می‌شوند.
 enum AppInfo {
-    static let version = "1.4.0"
-    static let build = "8"
+    static let version = "1.4.1"
+    static let build = "9"
 
     /// تاریخچه‌ی تغییرات (جدیدترین بالا).
     static let changelog: [(version: String, fa: String, en: String)] = [
+        ("1.4.1",
+         "پاکسازی کد: پوشش کامل پنجره‌ی آماری در بازه‌های کوتاه، رفع نشت session، توقف رفرش IP هنگام Stop، ایمن‌سازی thread در جمع‌آوری متریک‌ها و حذف کد مرده.",
+         "Code cleanup: full stats-window coverage at short intervals, session-leak fix, IP refresh stops with monitoring, thread-safe metrics collection, dead-code removal."),
         ("1.4.0",
          "گِیجِ پر/خالی‌شونده در نوار منو، کالیبراسیونِ آستانه‌های کیفیت، و رفعِ افتادنِ نمودار هنگام قطعی.",
          "Fillable menu-bar gauge, quality calibration thresholds, and outage chart-drop fix."),

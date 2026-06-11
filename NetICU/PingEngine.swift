@@ -28,7 +28,7 @@ actor PingEngine {
         req.httpMethod = "HEAD"
         req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         req.timeoutInterval = Double(timeoutMs) / 1000.0
-        req.setValue("NetICU/1.0", forHTTPHeaderField: "User-Agent")
+        req.setValue("NetICU/\(AppInfo.version)", forHTTPHeaderField: "User-Agent")
 
         let session = session(for: proxy)
         let collector = MetricsCollector()
@@ -130,15 +130,22 @@ private final class InsecureTrustDelegate: NSObject, URLSessionDelegate {
 }
 
 /// دلیگیتِ هر-درخواست که متریک‌های زمان‌بندی را جمع می‌کند و به PingBreakdown تبدیل می‌کند.
+/// (نوشتن روی صفِ delegate و خواندن بعد از پایان درخواست انجام می‌شود؛ lock دسترسی را امن می‌کند.)
 private final class MetricsCollector: NSObject, URLSessionTaskDelegate {
+    private let lock = NSLock()
     private var collected: URLSessionTaskMetrics?
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+        lock.lock()
         collected = metrics
+        lock.unlock()
     }
 
     func breakdown() -> PingBreakdown? {
-        guard let t = collected?.transactionMetrics.last else { return nil }
+        lock.lock()
+        let metrics = collected
+        lock.unlock()
+        guard let t = metrics?.transactionMetrics.last else { return nil }
         func ms(_ a: Date?, _ b: Date?) -> Double? {
             guard let a, let b else { return nil }
             let v = b.timeIntervalSince(a) * 1000.0

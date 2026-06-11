@@ -223,9 +223,9 @@ struct TargetDetailView: View {
                 }
 
                 chartCard(title: loc.t("ping_trend"),
-                          chart: TrendChart(points: samples.pingPoints, color: Theme.accent, decimals: 0, markLoss: true))
+                          chart: TrendChart(points: samples.pingPoints, color: Theme.accent, markLoss: true))
                 chartCard(title: loc.t("jitter_trend"),
-                          chart: TrendChart(points: samples.jitterPoints, color: Theme.qYellow, decimals: 1))
+                          chart: TrendChart(points: samples.jitterPoints, color: Theme.qYellow))
 
                 if let bd = vm.breakdown(for: target), bd.hasAny {
                     breakdownCard(bd)

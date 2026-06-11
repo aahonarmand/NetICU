@@ -30,7 +30,10 @@ final class MonitorViewModel: ObservableObject {
     }
 
     /// بیشینه‌ی تعداد نمونه‌ی نگه‌داری‌شده برای هر هدف.
-    private let maxSamples = 120
+    /// همیشه دست‌کم پنجره‌ی آماری (۲ دقیقه) را پوشش می‌دهد، حتی با بازه‌های کوتاه (مثل ۰٫۵ ثانیه).
+    private var maxSamples: Int {
+        max(120, Int(StatisticsCalculator.statsWindowSeconds / max(0.5, intervalSeconds)) + 10)
+    }
 
     private let engine = PingEngine()
     private var monitorTask: Task<Void, Never>?
@@ -120,6 +123,8 @@ final class MonitorViewModel: ObservableObject {
         isMonitoring = false
         monitorTask?.cancel()
         monitorTask = nil
+        ipTask?.cancel()
+        ipTask = nil
     }
 
     // MARK: - آی‌پی کاربر
@@ -139,13 +144,18 @@ final class MonitorViewModel: ObservableObject {
         publicIP = await MonitorViewModel.fetchPublicIP()
     }
 
-    /// آی‌پی عمومی را از چند سرویس به‌ترتیب امتحان می‌کند.
-    private static func fetchPublicIP() async -> String? {
-        let endpoints = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://icanhazip.com"]
+    /// سشنِ مشترک برای گرفتن آی‌پی عمومی (یک‌بار ساخته می‌شود تا هر ۶۰ ثانیه سشن جدید نسازیم).
+    private static let ipSession: URLSession = {
         let cfg = URLSessionConfiguration.ephemeral
         cfg.timeoutIntervalForRequest = 5
         cfg.waitsForConnectivity = false
-        let session = URLSession(configuration: cfg)
+        return URLSession(configuration: cfg)
+    }()
+
+    /// آی‌پی عمومی را از چند سرویس به‌ترتیب امتحان می‌کند.
+    private static func fetchPublicIP() async -> String? {
+        let endpoints = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://icanhazip.com"]
+        let session = ipSession
         for ep in endpoints {
             guard let url = URL(string: ep) else { continue }
             do {

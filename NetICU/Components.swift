@@ -114,7 +114,6 @@ struct TrendChart: View {
     @EnvironmentObject var loc: Localizer
     let points: [TrendPoint]
     var color: Color
-    var decimals: Int = 0
     var markLoss: Bool = false
     var height: CGFloat = 150
     var compact: Bool = false   // برای نمودارهای کوچکِ داشبورد، محور زمان پنهان می‌شود
@@ -195,14 +194,5 @@ struct TrendChart: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - کمک‌کننده‌های قالب‌بندی (مستقل از زبان، در صورت نیاز)
-
-enum Fmt {
-    static func ms(_ value: Double?) -> String {
-        guard let value = value else { return "—" }
-        return String(format: "%.0f", value)
     }
 }

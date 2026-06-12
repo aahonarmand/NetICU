@@ -97,6 +97,14 @@ The project uses filesystem-synchronized groups (Xcode 16+), so any `.swift` fil
 | 1.1.0 | Timing breakdown (DNS/TCP/TLS/TTFB) and p95 |
 | 1.0.0 | First release: ping, jitter, loss, dashboard, IP, sorting |
 
+## Donate
+
+If NetICU is useful to you, you can support its development with Bitcoin:
+
+```
+bc1ql6smt9qjll60r76q9mh2zf725mw0q0dt5r96ay
+```
+
 ## License
 
 [MIT](LICENSE) © Aliasghar Honarmand
@@ -150,6 +158,18 @@ NetICU با مانیتورکردن **همزمان** چند مقصد به این 
 
 - مک‌اواس ۱۳ به بالا (پراکسی به‌ازای هر مانیتور نیازمند مک‌اواس ۱۴+)
 - برای ساخت از سورس: Xcode 16+
+
+## حمایت مالی
+
+اگر NetICU برایت مفید بوده، می‌توانی با بیت‌کوین از توسعه‌ی آن حمایت کنی:
+
+<div dir="ltr">
+
+```
+bc1ql6smt9qjll60r76q9mh2zf725mw0q0dt5r96ay
+```
+
+</div>
 
 ## مجوز
 

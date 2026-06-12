@@ -1,13 +1,16 @@
 import Foundation
 
-/// اطلاعات نسخه‌ی اپ — منبعِ واحد و قابل‌اعتماد (مستقل از تنظیمات پروژه‌ی Xcode).
-/// در هر به‌روزرسانی، `version` و `changelog` همین‌جا به‌روز می‌شوند.
+/// App version info — the single source of truth (independent of Xcode project settings).
+/// On every release, update `version` and `changelog` here.
 enum AppInfo {
-    static let version = "1.4.1"
-    static let build = "9"
+    static let version = "1.5.0"
+    static let build = "10"
 
-    /// تاریخچه‌ی تغییرات (جدیدترین بالا).
+    /// Change history (newest first).
     static let changelog: [(version: String, fa: String, en: String)] = [
+        ("1.5.0",
+         "آماده‌سازی متن‌باز: ترجمه‌ی همه‌ی کامنت‌ها به انگلیسی، تست واحد برای آمار و تجزیه، اعتبارسنجی TLS فقط برای IP خام دور زده می‌شود، رفرش IP عمومی دستی/انتخابی (هر ۵ دقیقه)، کلیدهای UserDefaults متمرکز، شناسه‌ی پایدار نقاط نمودار، یکسان‌سازی تایم‌اوت، و فایل‌های CI/CONTRIBUTING/SECURITY.",
+         "Open-source readiness: all code comments translated to English, unit tests for statistics/breakdown, TLS validation bypassed only for raw-IP targets, public-IP refresh now manual/opt-in (5-min cadence), centralized UserDefaults keys, stable chart-point identity, unified probe timeout, and CI/CONTRIBUTING/SECURITY files."),
         ("1.4.1",
          "پاکسازی کد: پوشش کامل پنجره‌ی آماری در بازه‌های کوتاه، رفع نشت session، توقف رفرش IP هنگام Stop، ایمن‌سازی thread در جمع‌آوری متریک‌ها و حذف کد مرده.",
          "Code cleanup: full stats-window coverage at short intervals, session-leak fix, IP refresh stops with monitoring, thread-safe metrics collection, dead-code removal."),

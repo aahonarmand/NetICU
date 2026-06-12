@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// شیت افزودن یا ویرایش یک مانیتور.
+/// Sheet for adding or editing a monitor.
 struct AddTargetView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var loc: Localizer
@@ -9,12 +9,12 @@ struct AddTargetView: View {
     @State private var host: String
     @State private var portText: String
     @State private var isEnabled: Bool
-    // پراکسی
+    // Proxy
     @State private var proxyEnabled: Bool
     @State private var proxyType: ProxyType
     @State private var proxyHost: String
     @State private var proxyPortText: String
-    // هشدار
+    // Alert
     @State private var alertEnabled: Bool
     @State private var alertThresholdText: String
     @State private var alertDurationText: String

@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// پنجره‌ی «درباره»: معرفی اپ، واژه‌نامه‌ی معیارها و اعتبار توسعه‌دهنده.
+/// "About" window: app introduction, metrics glossary and developer credit.
 struct AboutView: View {
     @EnvironmentObject var loc: Localizer
     @Environment(\.dismiss) private var dismiss

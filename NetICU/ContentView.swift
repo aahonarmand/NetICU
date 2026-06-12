@@ -6,7 +6,7 @@ enum SidebarItem: Hashable {
     case target(UUID)
 }
 
-/// پنجره‌ی اصلی: نوار کناری (داشبورد + مانیتورها) و بخش جزئیات.
+/// Main window: sidebar (dashboard + monitors) and the detail pane.
 struct ContentView: View {
     @EnvironmentObject var vm: MonitorViewModel
     @EnvironmentObject var loc: Localizer
@@ -39,13 +39,14 @@ struct ContentView: View {
             AboutView().environmentObject(loc)
         }
         .task {
-            // شروع پایش در یک تسکِ مجزا، بعد از پاس چیدمانِ جاری، تا تغییر state
-            // حین layout باعث کرشِ بازگشتیِ Update Constraints نشود.
+            // Start monitoring in a separate task, after the current layout pass,
+            // so a state change during layout can't cause a recursive
+            // Update Constraints crash.
             if !vm.isMonitoring { vm.start() }
         }
     }
 
-    // MARK: - نوار کناری
+    // MARK: - Sidebar
 
     private var sidebar: some View {
         List(selection: $selection) {
@@ -145,7 +146,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - جزئیات
+    // MARK: - Detail
 
     @ViewBuilder
     private var detail: some View {
@@ -162,7 +163,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - ردیف مانیتور در نوار کناری
+// MARK: - Monitor row in the sidebar
 
 struct TargetRow: View {
     @EnvironmentObject var loc: Localizer
@@ -189,7 +190,7 @@ struct TargetRow: View {
     }
 }
 
-// MARK: - نمای جزئیات یک مانیتور
+// MARK: - Monitor detail view
 
 struct TargetDetailView: View {
     @EnvironmentObject var vm: MonitorViewModel

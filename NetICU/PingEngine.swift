@@ -1,25 +1,32 @@
 import Foundation
 import Network
 
-/// موتور اندازه‌گیری کیفیت اتصال.
+/// Single source of truth for probe timeouts.
+enum ProbeTimeout {
+    static let seconds: Double = 5
+    static var milliseconds: Int { Int(seconds * 1000) }
+}
+
+/// Connection-quality measurement engine.
 ///
-/// به‌جای زمانِ دست‌دادن خام TCP، یک درخواست HTTP(S) واقعی به هدف می‌فرستد و زمان
-/// پاسخ را می‌سنجد. علتش این است که در برخی شبکه‌ها (مثل شبکه‌هایی با پروکسی/میدل‌باکس
-/// شفاف) دست‌دادن TCP به‌صورت محلی و آنی پاسخ داده می‌شود و زمان آن تقریباً صفر می‌افتد.
-/// یک درخواست HTTP باید تا خود سرور برود و برگردد، پس عددی واقعی و معنادار می‌دهد.
+/// Instead of timing a raw TCP handshake, it sends a real HTTP(S) request to the target
+/// and measures the response time. The reason: on some networks (e.g. behind transparent
+/// proxies/middleboxes) the TCP handshake is answered locally and instantly, so its time
+/// is nearly zero. An HTTP request must travel to the actual server and back, producing
+/// a real, meaningful number.
 actor PingEngine {
 
     private let defaultSession: URLSession
-    /// سشن‌های کش‌شده بر اساس پراکسی (تا برای هر بار اندازه‌گیری سشن جدید نسازیم).
+    /// Sessions cached per proxy (so we don't build a new session for every measurement).
     private var proxySessions: [String: URLSession] = [:]
 
     init() {
         defaultSession = PingEngine.makeSession(proxy: nil)
     }
 
-    /// یک بار اندازه‌گیری (در صورت تعیین پراکسی، از طریق آن).
+    /// One measurement (through the given proxy, if any).
     func ping(host: String, port: UInt16, proxy: ProxyConfig? = nil,
-              timeoutMs: Int = 6000) async -> (sample: PingSample, breakdown: PingBreakdown?) {
+              timeoutMs: Int = ProbeTimeout.milliseconds) async -> (sample: PingSample, breakdown: PingBreakdown?) {
         guard let url = makeURL(host: host, port: port) else {
             return (PingSample(date: Date(), rttMs: nil), nil)
         }
@@ -42,7 +49,7 @@ actor PingEngine {
         }
     }
 
-    /// انتخاب/ساختِ سشن مناسب برای پراکسیِ داده‌شده.
+    /// Picks/builds the right session for the given proxy.
     private func session(for proxy: ProxyConfig?) -> URLSession {
         guard let proxy, proxy.isValid else { return defaultSession }
         let key = "\(proxy.type.rawValue)://\(proxy.host):\(proxy.port)"
@@ -56,12 +63,12 @@ actor PingEngine {
         let cfg = URLSessionConfiguration.ephemeral
         cfg.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         cfg.urlCache = nil
-        cfg.timeoutIntervalForRequest = 6
-        cfg.timeoutIntervalForResource = 6
+        cfg.timeoutIntervalForRequest = ProbeTimeout.seconds
+        cfg.timeoutIntervalForResource = ProbeTimeout.seconds
         cfg.waitsForConnectivity = false
         if let proxy, proxy.isValid {
-            // در macOS 14+ از API مدرنِ Network استفاده می‌کنیم که SOCKS5 و HTTP را
-            // واقعاً پشتیبانی می‌کند؛ در نسخه‌های قدیمی‌تر fallback به روش قدیمی.
+            // On macOS 14+ we use the modern Network API, which properly supports
+            // SOCKS5 and HTTP; on older versions we fall back to the legacy dictionary.
             if #available(macOS 14.0, *), let nwPort = NWEndpoint.Port(rawValue: proxy.port) {
                 let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(proxy.host), port: nwPort)
                 let pc: ProxyConfiguration
@@ -74,8 +81,7 @@ actor PingEngine {
                 cfg.connectionProxyDictionary = PingEngine.proxyDictionary(proxy)
             }
         }
-        // اجازه‌ی استفاده از گواهی نامعتبر (مثلاً وقتی هدف یک IP خام است) فقط برای سنجش زمان.
-        return URLSession(configuration: cfg, delegate: InsecureTrustDelegate(), delegateQueue: nil)
+        return URLSession(configuration: cfg, delegate: ProbeTrustDelegate(), delegateQueue: nil)
     }
 
     private static func proxyDictionary(_ p: ProxyConfig) -> [String: Any] {
@@ -99,7 +105,7 @@ actor PingEngine {
         }
     }
 
-    /// ساخت URL از ورودی کاربر (دامنه، IP یا آدرس کامل) + پارامتر ضدکش.
+    /// Builds a URL from user input (domain, IP or full URL) + a cache-busting parameter.
     private func makeURL(host raw: String, port: UInt16) -> URL? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         var base: String
@@ -115,22 +121,46 @@ actor PingEngine {
     }
 }
 
-/// اعتماد به هر گواهی TLS — فقط برای اندازه‌گیری زمان لازم است، داده‌ی حساسی رد و بدل نمی‌شود.
-private final class InsecureTrustDelegate: NSObject, URLSessionDelegate {
-    func urlSession(_ session: URLSession,
-                    didReceive challenge: URLAuthenticationChallenge,
-                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-           let trust = challenge.protectionSpace.serverTrust {
-            completionHandler(.useCredential, URLCredential(trust: trust))
-        } else {
-            completionHandler(.performDefaultHandling, nil)
+/// Host-string classification helpers.
+enum HostClassifier {
+    /// True if the string parses as a literal IPv4 or IPv6 address.
+    static func isRawIPAddress(_ host: String) -> Bool {
+        var v4 = in_addr()
+        var v6 = in6_addr()
+        return host.withCString { cs in
+            inet_pton(AF_INET, cs, &v4) == 1 || inet_pton(AF_INET6, cs, &v6) == 1
         }
     }
 }
 
-/// دلیگیتِ هر-درخواست که متریک‌های زمان‌بندی را جمع می‌کند و به PingBreakdown تبدیل می‌کند.
-/// (نوشتن روی صفِ delegate و خواندن بعد از پایان درخواست انجام می‌شود؛ lock دسترسی را امن می‌کند.)
+/// TLS trust policy for probe requests.
+///
+/// THREAT MODEL: probes are HEAD requests that carry no user data and whose responses
+/// are discarded — only timing is measured. Certificate validation is bypassed ONLY
+/// when the probed host is a raw IP address (e.g. "1.1.1.1"), because public CAs
+/// rarely issue certificates for bare IPs and such targets would otherwise be
+/// unmeasurable over HTTPS. For named hosts (and anything going through a proxy to a
+/// named host) the system's default certificate validation applies unchanged.
+/// See SECURITY.md for the full rationale.
+private final class ProbeTrustDelegate: NSObject, URLSessionDelegate {
+    func urlSession(_ session: URLSession,
+                    didReceive challenge: URLAuthenticationChallenge,
+                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let trust = challenge.protectionSpace.serverTrust,
+              HostClassifier.isRawIPAddress(challenge.protectionSpace.host) else {
+            // Named host (or non-server-trust challenge): default system validation.
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        // Raw-IP target: accept the certificate; we only measure timing.
+        completionHandler(.useCredential, URLCredential(trust: trust))
+    }
+}
+
+/// Per-request delegate that collects timing metrics and converts them to a PingBreakdown.
+/// (Writes happen on the delegate queue and reads after the request finishes; the lock
+/// makes the access safe.)
 private final class MetricsCollector: NSObject, URLSessionTaskDelegate {
     private let lock = NSLock()
     private var collected: URLSessionTaskMetrics?
@@ -152,7 +182,7 @@ private final class MetricsCollector: NSObject, URLSessionTaskDelegate {
             return v >= 0 ? v : nil
         }
         let dns  = ms(t.domainLookupStartDate, t.domainLookupEndDate)
-        // بخشِ خالصِ TCP تا قبل از شروع TLS (در صورت وجود)
+        // The pure TCP part, up to the start of TLS (when present).
         let tcp  = ms(t.connectStartDate, t.secureConnectionStartDate ?? t.connectEndDate)
         let tls  = ms(t.secureConnectionStartDate, t.secureConnectionEndDate)
         let ttfb = ms(t.requestStartDate, t.responseStartDate)

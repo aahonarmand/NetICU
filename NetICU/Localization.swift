@@ -1,30 +1,30 @@
 import SwiftUI
 import Combine
 
-/// مدیریت رشته‌های رابط کاربری — اپ فقط انگلیسی است.
+/// UI string management — the app is English-only.
 @MainActor
 final class Localizer: ObservableObject {
 
-    /// همیشه چپ‌چین (انگلیسی).
+    /// Always left-to-right (English).
     var isRTL: Bool { false }
 
-    /// رشته‌ی یک کلید؛ اگر کلید نبود خودِ کلید برگردانده می‌شود.
+    /// String for a key; returns the key itself if missing.
     func t(_ key: String) -> String {
         Localizer.table[key] ?? key
     }
 
-    // MARK: - شکل‌دهی اعداد
+    // MARK: - Number formatting
 
-    /// عدد صحیح (میلی‌ثانیه)
+    /// Whole number (milliseconds).
     func n0(_ v: Double?) -> String { v == nil ? "—" : String(Int(v!.rounded())) }
-    /// عدد با یک رقم اعشار
+    /// Number with one decimal place.
     func n1(_ v: Double?) -> String { v == nil ? "—" : String(format: "%.1f", v!) }
-    /// عدد صحیح ساده
+    /// Plain integer.
     func int(_ v: Int) -> String { String(v) }
-    /// درصد
+    /// Percentage.
     func pct(_ v: Double) -> String { String(Int(v.rounded())) + "%" }
 
-    /// برچسب کیفیت بر اساس امتیاز
+    /// Quality label for a score.
     func quality(_ score: Int) -> String {
         switch score {
         case 85...100: return t("excellent")
@@ -35,7 +35,7 @@ final class Localizer: ObservableObject {
         }
     }
 
-    // MARK: - جدول رشته‌ها
+    // MARK: - String table
 
     private static let table: [String: String] = [
         "dashboard":      "Dashboard",
@@ -84,6 +84,8 @@ final class Localizer: ObservableObject {
         "your_connection": "Your connection",
         "tagline":        "Internet, in intensive care",
         "refresh_ip":     "Refresh IP",
+        "auto_refresh_ip": "Refresh public IP automatically (every 5 min)",
+        "ip_privacy_help": "Your public IP is looked up via third-party services (api.ipify.org, ifconfig.me, icanhazip.com). When this is off, NetICU only contacts them when you press the refresh button on the dashboard.",
         "name_ph":        "e.g. Game server",
         "host_ph":        "google.com or 1.1.1.1",
         "sort":           "Sort",
@@ -133,7 +135,7 @@ final class Localizer: ObservableObject {
         "menubar_help":   "Each line shows the ping of the chosen monitor, colored by its status. Pick a different monitor for top and bottom.",
         "weights_help":   "How much each factor counts toward the percentage. Weights are normalized automatically.",
 
-        // درباره
+        // About
         "about":          "About",
         "about_desc":     "NetICU monitors the quality of your internet AND the performance of specific servers in real time — ping, jitter, packet loss and a DNS/TCP/TLS/TTFB breakdown — so you can tell whether a slowdown is your network or the server itself.",
         "developer":      "Developer",
@@ -143,7 +145,7 @@ final class Localizer: ObservableObject {
         "close":          "Close",
         "score":          "Quality score",
 
-        // راهنمای معیارها (هم برای تول‌تیپ، هم برای واژه‌نامه)
+        // Metric help (used for both tooltips and the glossary)
         "current_help":   "The most recent ping measurement.",
         "ping_help":      "Round-trip time of a request to the target. Lower is better.",
         "average_help":   "Average ping over the recent window.",

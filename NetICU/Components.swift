@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-// MARK: - نقطه‌ی رنگیِ وضعیت
+// MARK: - Colored status dot
 
 struct StatusDot: View {
     let color: Color
@@ -15,7 +15,7 @@ struct StatusDot: View {
     }
 }
 
-// MARK: - کارت آماری
+// MARK: - Statistic card
 
 struct StatCard: View {
     let title: String
@@ -65,7 +65,7 @@ struct StatCard: View {
     }
 }
 
-// MARK: - نشانِ امتیاز و درجه
+// MARK: - Score & grade badge
 
 struct ScoreBadge: View {
     @EnvironmentObject var loc: Localizer
@@ -87,12 +87,15 @@ struct ScoreBadge: View {
     }
 }
 
-// MARK: - داده‌ی نمودار روند
+// MARK: - Trend-chart data
 
+/// A point in the trend chart. Identity is derived from the sample's date (stable
+/// across renders), so SwiftUI/Charts can diff points instead of rebuilding the
+/// whole chart each update cycle.
 struct TrendPoint: Identifiable {
-    let id = UUID()
     let date: Date
     let value: Double?
+    var id: Date { date }
 }
 
 extension Array where Element == PingSample {
@@ -108,7 +111,7 @@ extension Array where Element == PingSample {
     }
 }
 
-// MARK: - نمودار روند (پینگ یا جیتر)
+// MARK: - Trend chart (ping or jitter)
 
 struct TrendChart: View {
     @EnvironmentObject var loc: Localizer
@@ -116,13 +119,13 @@ struct TrendChart: View {
     var color: Color
     var markLoss: Bool = false
     var height: CGFloat = 150
-    var compact: Bool = false   // برای نمودارهای کوچکِ داشبورد، محور زمان پنهان می‌شود
+    var compact: Bool = false   // small dashboard charts hide the time axis
 
     private var valued: [TrendPoint] { points.filter { $0.value != nil } }
 
     var body: some View {
-        // برای نمودار پینگ، نقاطِ قطعی هم به‌حساب می‌آیند تا هنگام قطعی، نمودار
-        // (خطِ صفر + نقاط قرمز) نمایش داده شود نه پیام «در حال جمع‌آوری».
+        // For the ping chart, outage points also count, so during an outage the chart
+        // (zero line + red dots) is shown instead of the "collecting data" message.
         let enough = (markLoss ? points.count : valued.count) >= 2
         return Group {
             if enough {
@@ -150,8 +153,8 @@ struct TrendChart: View {
     private var chart: some View {
         Chart {
             ForEach(points) { p in
-                // در نمودار پینگ، نقاطِ قطعی (nil) را با مقدار صفر رسم می‌کنیم تا خط
-                // هنگام قطعی واقعاً به پایین بیفتد (به‌جای پریدن از روی قطعی).
+                // In the ping chart, outage points (nil) are drawn at zero so the line
+                // actually drops during an outage (instead of skipping over it).
                 let lineY: Double? = p.value ?? (markLoss ? 0 : nil)
                 if let lineY {
                     LineMark(x: .value("t", p.date), y: .value("v", lineY))
@@ -185,7 +188,7 @@ struct TrendChart: View {
         }
         .chartXAxis {
             if !compact {
-                // فقط ساعت و دقیقه (بدون ثانیه) و تعداد کم برچسب تا روی هم نیفتند
+                // Hours and minutes only (no seconds), few labels so they don't overlap.
                 AxisMarks(values: .automatic(desiredCount: 3)) { _ in
                     AxisGridLine().foregroundStyle(Theme.stroke.opacity(0.35))
                     AxisValueLabel(format: .dateTime.hour().minute())

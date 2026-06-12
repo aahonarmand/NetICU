@@ -7,7 +7,7 @@ struct NetICUApp: App {
     @StateObject private var loc = Localizer()
 
     var body: some Scene {
-        // پنجره‌ی اصلی
+        // Main window
         Window("NetICU", id: "main") {
             ContentView()
                 .environmentObject(vm)
@@ -16,14 +16,14 @@ struct NetICUApp: App {
         }
         .windowResizability(.contentMinSize)
 
-        // تنظیمات
+        // Settings
         Settings {
             SettingsView()
                 .environmentObject(vm)
                 .environmentObject(loc)
         }
 
-        // آیکون نوار منو
+        // Menu-bar icon
         MenuBarExtra {
             MenuBarView()
                 .environmentObject(vm)
@@ -35,21 +35,23 @@ struct NetICUApp: App {
     }
 }
 
-/// گِیجِ نوار منو: یک مخزنِ کوچک که با کیفیتِ کلی پر/خالی می‌شود و رنگ عوض می‌کند.
-/// عرضش ثابت است تا باعثِ بازچینش (و کرش) نوار منو نشود.
+/// The menu-bar gauge: two stacked ping numbers, each tracking a chosen monitor.
+/// Its width is fixed so it never triggers a menu-bar relayout (which can crash).
 struct MenuBarGauge: View {
     @ObservedObject var vm: MonitorViewModel
+    // @AppStorage (not a raw UserDefaults read) so the view also updates when only
+    // the setting changes, not just when the view model publishes.
+    @AppStorage(DefaultsKey.menuBarTopID) private var topSel: String = "auto"
+    @AppStorage(DefaultsKey.menuBarBottomID) private var botSel: String = "auto"
 
     var body: some View {
-        // هر عدد پینگِ یک مانیتورِ انتخابی است (بالا و پایین مستقل).
-        let topSel = UserDefaults.standard.string(forKey: "menuBarTopID") ?? "auto"
-        let botSel = UserDefaults.standard.string(forKey: "menuBarBottomID") ?? "auto"
-        return Image(nsImage: MenuBarGauge.render(top: vm.menuBarStats(for: topSel),
-                                                  bottom: vm.menuBarStats(for: botSel)))
+        // Each number is the ping of one selected monitor (top and bottom independent).
+        Image(nsImage: MenuBarGauge.render(top: vm.menuBarStats(for: topSel),
+                                           bottom: vm.menuBarStats(for: botSel)))
             .help("NetICU")
     }
 
-    /// دو عددِ پینگ روی‌هم — هر کدام برای یک مانیتور، با رنگِ وضعیتِ خودش.
+    /// Two ping numbers stacked — one per monitor, each colored by its own status.
     static func render(top topStats: TargetStatistics?, bottom bottomStats: TargetStatistics?) -> NSImage {
         let size = NSSize(width: 30, height: 20)
         let image = NSImage(size: size)
@@ -69,7 +71,7 @@ struct MenuBarGauge: View {
             text = "\(Int(ping))"
             color = NSColor(Theme.quality(StatisticsCalculator.latencySubScore(ping)))
         } else if hasData {
-            text = "—"; color = NSColor.systemRed   // پاسخی نیامده
+            text = "—"; color = NSColor.systemRed   // no reply
         } else {
             text = "—"; color = .gray
         }
@@ -81,22 +83,22 @@ struct MenuBarGauge: View {
     }
 }
 
-/// پنجره‌ی تنظیمات.
+/// Settings window.
 struct SettingsView: View {
     @EnvironmentObject var vm: MonitorViewModel
     @EnvironmentObject var loc: Localizer
 
-    // کالیبراسیونِ آستانه‌ها (برای امتیاز و رنگِ آیکونِ نوار منو)
-    @AppStorage(Calibration.latBestKey)  private var latBest: Double = Calibration.defaultLatBest
-    @AppStorage(Calibration.latWorstKey) private var latWorst: Double = Calibration.defaultLatWorst
-    @AppStorage(Calibration.lossWorstKey) private var lossWorst: Double = Calibration.defaultLossWorst
-    // وزن‌های فرمولِ درصد
-    @AppStorage(Calibration.wLatKey)  private var wLat: Double = Calibration.defaultWLat
-    @AppStorage(Calibration.wJitKey)  private var wJit: Double = Calibration.defaultWJit
-    @AppStorage(Calibration.wLossKey) private var wLoss: Double = Calibration.defaultWLoss
-    // مانیتورِ مرجعِ هر عددِ نوار منو (بالا و پایین مستقل)
-    @AppStorage("menuBarTopID") private var menuBarTopID: String = "auto"
-    @AppStorage("menuBarBottomID") private var menuBarBottomID: String = "auto"
+    // Threshold calibration (for the score and the menu-bar colors)
+    @AppStorage(DefaultsKey.latencyBest)  private var latBest: Double = Calibration.defaultLatBest
+    @AppStorage(DefaultsKey.latencyWorst) private var latWorst: Double = Calibration.defaultLatWorst
+    @AppStorage(DefaultsKey.lossWorst)    private var lossWorst: Double = Calibration.defaultLossWorst
+    // Score-formula weights
+    @AppStorage(DefaultsKey.weightLatency) private var wLat: Double = Calibration.defaultWLat
+    @AppStorage(DefaultsKey.weightJitter)  private var wJit: Double = Calibration.defaultWJit
+    @AppStorage(DefaultsKey.weightLoss)    private var wLoss: Double = Calibration.defaultWLoss
+    // Reference monitor for each menu-bar number (top and bottom independent)
+    @AppStorage(DefaultsKey.menuBarTopID)    private var menuBarTopID: String = "auto"
+    @AppStorage(DefaultsKey.menuBarBottomID) private var menuBarBottomID: String = "auto"
 
     var body: some View {
         Form {
@@ -110,6 +112,13 @@ struct SettingsView: View {
                 }
                 Text("\(loc.n1(vm.intervalSeconds)) \(loc.t("seconds"))")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle(loc.t("auto_refresh_ip"), isOn: $vm.autoRefreshIP)
+                Text(loc.t("ip_privacy_help")).font(.caption2).foregroundStyle(.secondary)
+            } header: {
+                Text(loc.t("public_ip"))
             }
 
             Section {
@@ -156,7 +165,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 640)
+        .frame(width: 440, height: 700)
     }
 
     private func weightPct(_ w: Double, _ total: Double) -> String {

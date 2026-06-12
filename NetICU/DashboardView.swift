@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// داشبورد: نمای کلی همه‌ی مانیتورها + آی‌پی کاربر.
+/// Dashboard: overview of all monitors + the user's IP.
 struct DashboardView: View {
     @EnvironmentObject var vm: MonitorViewModel
     @EnvironmentObject var loc: Localizer
@@ -31,7 +31,7 @@ struct DashboardView: View {
         .navigationTitle(loc.t("dashboard"))
     }
 
-    // MARK: - ردیف بالا: آی‌پی + خلاصه
+    // MARK: - Top row: IP + summary
 
     private var topRow: some View {
         let summary = overallSummary
@@ -67,7 +67,7 @@ struct DashboardView: View {
             Image(systemName: icon).font(.caption).foregroundStyle(Theme.textSecondary).frame(width: 16)
             Text(label).font(.callout).foregroundStyle(Theme.textSecondary)
             Spacer()
-            Text(value ?? "…")
+            Text(value ?? "—")
                 .font(.system(.callout, design: .monospaced))
                 .foregroundStyle(Theme.textPrimary)
                 .textSelection(.enabled)
@@ -103,7 +103,7 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - محاسبه‌ی خلاصه
+    // MARK: - Summary computation
 
     private struct Summary { var active: Int; var avgScore: Int; var worst: Int? }
 
@@ -117,7 +117,7 @@ struct DashboardView: View {
     }
 }
 
-// MARK: - کارت یک مانیتور در داشبورد
+// MARK: - Single monitor card on the dashboard
 
 struct DashboardCard: View {
     @EnvironmentObject var loc: Localizer

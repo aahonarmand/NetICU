@@ -3,34 +3,34 @@ import SwiftUI
 import Combine
 import UserNotifications
 
-/// ترتیب نمایش مانیتورها.
+/// Display order of monitors.
 enum SortOrder: String, CaseIterable {
     case manual, name, ping, quality
 }
 
-/// مدیریت حالت کل اپ: اهداف، تاریخچه‌ی نمونه‌ها، حلقه‌ی پایش و ذخیره‌سازی.
+/// Manages the whole app's state: targets, sample history, the monitoring loop and persistence.
 @MainActor
 final class MonitorViewModel: ObservableObject {
 
     @Published var targets: [PingTarget] = []
-    /// تاریخچه‌ی نمونه‌ها به ازای id هر هدف.
+    /// Sample history per target id.
     @Published private(set) var histories: [UUID: [PingSample]] = [:]
     @Published private(set) var stats: [UUID: TargetStatistics] = [:]
-    /// آخرین تجزیه‌ی زمانِ هر هدف (DNS/TCP/TLS/TTFB).
+    /// Latest timing breakdown per target (DNS/TCP/TLS/TTFB).
     @Published private(set) var breakdowns: [UUID: PingBreakdown] = [:]
     @Published var isMonitoring: Bool = false
 
-    /// بازه‌ی بین هر دور اندازه‌گیری (ثانیه). با تغییر، در UserDefaults ذخیره می‌شود.
+    /// Interval between measurement rounds (seconds). Persisted on change.
     @Published var intervalSeconds: Double {
-        didSet { UserDefaults.standard.set(intervalSeconds, forKey: "intervalSeconds") }
+        didSet { UserDefaults.standard.set(intervalSeconds, forKey: DefaultsKey.intervalSeconds) }
     }
-    /// ترتیب مرتب‌سازی نمایش. با تغییر، ذخیره می‌شود.
+    /// Display sort order. Persisted on change.
     @Published var sortOrder: SortOrder {
-        didSet { UserDefaults.standard.set(sortOrder.rawValue, forKey: "sortOrder") }
+        didSet { UserDefaults.standard.set(sortOrder.rawValue, forKey: DefaultsKey.sortOrder) }
     }
 
-    /// بیشینه‌ی تعداد نمونه‌ی نگه‌داری‌شده برای هر هدف.
-    /// همیشه دست‌کم پنجره‌ی آماری (۲ دقیقه) را پوشش می‌دهد، حتی با بازه‌های کوتاه (مثل ۰٫۵ ثانیه).
+    /// Maximum number of samples kept per target.
+    /// Always covers at least the statistics window (2 minutes), even at short intervals (e.g. 0.5 s).
     private var maxSamples: Int {
         max(120, Int(StatisticsCalculator.statsWindowSeconds / max(0.5, intervalSeconds)) + 10)
     }
@@ -38,21 +38,36 @@ final class MonitorViewModel: ObservableObject {
     private let engine = PingEngine()
     private var monitorTask: Task<Void, Never>?
 
-    // آی‌پی کاربر
+    // MARK: User IP
+
     @Published private(set) var publicIP: String? = nil
     @Published private(set) var localIP: String? = nil
     private var ipTask: Task<Void, Never>?
 
-    private let storageKey = "savedTargets"
+    /// Cadence of the (opt-in) automatic public-IP refresh.
+    static let ipAutoRefreshSeconds: UInt64 = 300   // 5 minutes
 
-    // وضعیت هشدار به‌ازای هر هدف (برای جلوگیری از نوتیفِ تکراری)
+    /// PRIVACY: the public IP is looked up via third-party services (see `publicIPEndpoints`).
+    /// Automatic polling is OFF by default — when disabled, those services are contacted
+    /// only when the user presses the refresh button. Persisted on change.
+    @Published var autoRefreshIP: Bool {
+        didSet {
+            UserDefaults.standard.set(autoRefreshIP, forKey: DefaultsKey.autoRefreshIP)
+            if autoRefreshIP, isMonitoring { startIPAutoRefresh() } else { stopIPAutoRefresh() }
+        }
+    }
+
+    // MARK: Alert state
+
+    // Per-target alert state (prevents duplicate notifications).
     private struct AlertState { var breachStart: Date? = nil; var notified: Bool = false }
     private var alertStates: [UUID: AlertState] = [:]
 
     init() {
-        let saved = UserDefaults.standard.double(forKey: "intervalSeconds")
+        let saved = UserDefaults.standard.double(forKey: DefaultsKey.intervalSeconds)
         intervalSeconds = saved > 0 ? saved : 2.0
-        sortOrder = SortOrder(rawValue: UserDefaults.standard.string(forKey: "sortOrder") ?? "") ?? .manual
+        sortOrder = SortOrder(rawValue: UserDefaults.standard.string(forKey: DefaultsKey.sortOrder) ?? "") ?? .manual
+        autoRefreshIP = UserDefaults.standard.bool(forKey: DefaultsKey.autoRefreshIP)
         loadTargets()
         if targets.isEmpty {
             targets = MonitorViewModel.defaultTargets
@@ -60,7 +75,7 @@ final class MonitorViewModel: ObservableObject {
         }
     }
 
-    // MARK: - چرخه‌ی پایش
+    // MARK: - Monitoring lifecycle
 
     func start() {
         guard !isMonitoring else { return }
@@ -68,11 +83,20 @@ final class MonitorViewModel: ObservableObject {
         monitorTask = Task { [weak self] in
             await self?.runLoop()
         }
-        startIPRefresh()
+        // Local IP costs nothing and contacts no one; public IP only if the user opted in.
+        localIP = MonitorViewModel.currentLocalIP()
+        if autoRefreshIP { startIPAutoRefresh() }
         requestNotificationPermissionIfNeeded()
     }
 
-    // MARK: - نوتیفیکیشن
+    func stop() {
+        isMonitoring = false
+        monitorTask?.cancel()
+        monitorTask = nil
+        stopIPAutoRefresh()
+    }
+
+    // MARK: - Notifications
 
     private var didRequestNotifPermission = false
     func requestNotificationPermissionIfNeeded() {
@@ -90,13 +114,13 @@ final class MonitorViewModel: ObservableObject {
         UNUserNotificationCenter.current().add(req)
     }
 
-    /// ارزیابی قوانین هشدار بر اساس آخرین نمونه‌ی هر هدف.
+    /// Evaluates the alert rules against each target's latest sample.
     private func evaluateAlerts(latest: [UUID: PingSample]) {
         let now = Date()
         for target in targets where target.isEnabled {
             guard let rule = target.alert else { alertStates[target.id] = nil; continue }
             guard let sample = latest[target.id] else { continue }
-            // breach: پینگ بالاتر از آستانه، یا اصلاً پاسخی نیامده (تایم‌اوت)
+            // breach: ping above the threshold, or no reply at all (timeout)
             let breach = (sample.rttMs == nil) || (sample.rttMs! > rule.pingThresholdMs)
             var state = alertStates[target.id] ?? AlertState()
             if breach {
@@ -119,32 +143,30 @@ final class MonitorViewModel: ObservableObject {
         }
     }
 
-    func stop() {
-        isMonitoring = false
-        monitorTask?.cancel()
-        monitorTask = nil
-        ipTask?.cancel()
-        ipTask = nil
-    }
+    // MARK: - User IP
 
-    // MARK: - آی‌پی کاربر
-
-    func startIPRefresh() {
+    private func startIPAutoRefresh() {
         guard ipTask == nil else { return }
         ipTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refreshIP()
-                try? await Task.sleep(nanoseconds: 60 * 1_000_000_000) // هر ۶۰ ثانیه
+                try? await Task.sleep(nanoseconds: MonitorViewModel.ipAutoRefreshSeconds * 1_000_000_000)
             }
         }
     }
 
+    private func stopIPAutoRefresh() {
+        ipTask?.cancel()
+        ipTask = nil
+    }
+
+    /// Manual refresh (the dashboard button) — always available regardless of the auto setting.
     func refreshIP() async {
         localIP = MonitorViewModel.currentLocalIP()
         publicIP = await MonitorViewModel.fetchPublicIP()
     }
 
-    /// سشنِ مشترک برای گرفتن آی‌پی عمومی (یک‌بار ساخته می‌شود تا هر ۶۰ ثانیه سشن جدید نسازیم).
+    /// Shared session for fetching the public IP (built once instead of per request).
     private static let ipSession: URLSession = {
         let cfg = URLSessionConfiguration.ephemeral
         cfg.timeoutIntervalForRequest = 5
@@ -152,11 +174,13 @@ final class MonitorViewModel: ObservableObject {
         return URLSession(configuration: cfg)
     }()
 
-    /// آی‌پی عمومی را از چند سرویس به‌ترتیب امتحان می‌کند.
+    /// Third-party services used to discover the public IP (documented in the README).
+    static let publicIPEndpoints = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://icanhazip.com"]
+
+    /// Tries the public-IP services in order.
     private static func fetchPublicIP() async -> String? {
-        let endpoints = ["https://api.ipify.org", "https://ifconfig.me/ip", "https://icanhazip.com"]
         let session = ipSession
-        for ep in endpoints {
+        for ep in publicIPEndpoints {
             guard let url = URL(string: ep) else { continue }
             do {
                 let (data, _) = try await session.data(from: url)
@@ -168,7 +192,7 @@ final class MonitorViewModel: ObservableObject {
         return nil
     }
 
-    /// آی‌پی محلی (IPv4) رابط فعال شبکه.
+    /// Local (IPv4) address of the active network interface.
     private static func currentLocalIP() -> String? {
         var address: String?
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
@@ -189,7 +213,7 @@ final class MonitorViewModel: ObservableObject {
                                    &host, socklen_t(host.count),
                                    nil, 0, NI_NUMERICHOST) == 0 {
                         address = String(cString: host)
-                        if name.hasPrefix("en") { break } // اولویت با رابط اصلی en0/en1
+                        if name.hasPrefix("en") { break } // prefer the primary interface (en0/en1)
                     }
                 }
             }
@@ -197,6 +221,8 @@ final class MonitorViewModel: ObservableObject {
         }
         return address
     }
+
+    // MARK: - Measurement loop
 
     private func runLoop() async {
         while !Task.isCancelled && isMonitoring {
@@ -206,7 +232,7 @@ final class MonitorViewModel: ObservableObject {
         }
     }
 
-    /// یک دور: همه‌ی اهداف فعال را هم‌زمان پینگ می‌کند.
+    /// One round: pings all enabled targets concurrently.
     private func runOneCycle() async {
         let active = targets.filter { $0.isEnabled }
         guard !active.isEmpty else { return }
@@ -217,16 +243,15 @@ final class MonitorViewModel: ObservableObject {
                 group.addTask { [engine] in
                     let r = await engine.ping(host: target.host,
                                               port: target.port,
-                                              proxy: target.proxy,
-                                              timeoutMs: 5000)
+                                              proxy: target.proxy)
                     return (target.id, r.sample, r.breakdown)
                 }
             }
             for await item in group { results.append(item) }
         }
 
-        // همه‌ی تغییرات را یک‌جا اعمال می‌کنیم تا در هر چرخه فقط یک‌بار منتشر شود
-        // (انتشارِ پرتکرار هم‌زمان با چیدمان می‌تواند باعث کرش شود).
+        // Apply all changes at once so each cycle publishes only once
+        // (frequent publishing during layout can cause crashes).
         var newHistories = histories
         var newStats = stats
         var newBreakdowns = breakdowns
@@ -246,13 +271,13 @@ final class MonitorViewModel: ObservableObject {
         stats = newStats
         breakdowns = newBreakdowns
 
-        // ارزیابی هشدارها بر اساس آخرین نمونه‌ی هر هدف
+        // Evaluate alerts against each target's latest sample.
         var latest: [UUID: PingSample] = [:]
         for (id, sample, _) in results { latest[id] = sample }
         evaluateAlerts(latest: latest)
     }
 
-    // MARK: - دسترسی به داده
+    // MARK: - Data access
 
     func history(for target: PingTarget) -> [PingSample] {
         histories[target.id] ?? []
@@ -266,7 +291,7 @@ final class MonitorViewModel: ObservableObject {
         breakdowns[target.id]
     }
 
-    /// فهرست مانیتورها بر اساس ترتیب انتخاب‌شده.
+    /// Monitors in the selected display order.
     var sortedTargets: [PingTarget] {
         switch sortOrder {
         case .manual:
@@ -277,19 +302,19 @@ final class MonitorViewModel: ObservableObject {
             return targets.sorted { a, b in
                 let pa = stats[a.id]?.current ?? .greatestFiniteMagnitude
                 let pb = stats[b.id]?.current ?? .greatestFiniteMagnitude
-                return pa < pb   // کم‌ترین پینگ اول
+                return pa < pb   // lowest ping first
             }
         case .quality:
             return targets.sorted { a, b in
                 let sa = (stats[a.id]?.sampleCount ?? 0) > 0 ? (stats[a.id]?.score ?? -1) : -1
                 let sb = (stats[b.id]?.sampleCount ?? 0) > 0 ? (stats[b.id]?.score ?? -1) : -1
-                return sa > sb   // بهترین کیفیت اول
+                return sa > sb   // best quality first
             }
         }
     }
 
-    /// جابجایی دستیِ مانیتورها (کشیدن). ترتیبِ نمایشیِ فعلی را مبنا می‌گیرد،
-    /// جابجایی را اعمال می‌کند و آن را به‌عنوان ترتیب دستیِ جدید ذخیره می‌کند.
+    /// Manual reordering (drag). Takes the current display order as the base,
+    /// applies the move, and saves it as the new manual order.
     func moveTargets(from source: IndexSet, to destination: Int) {
         var display = sortedTargets
         display.move(fromOffsets: source, toOffset: destination)
@@ -298,14 +323,14 @@ final class MonitorViewModel: ObservableObject {
         saveTargets()
     }
 
-    /// بدترین وضعیت در میان همه‌ی اهداف فعال (برای آیکون نوار منو).
+    /// Worst state among all enabled targets (for the menu-bar icon).
     var overallStatistics: TargetStatistics? {
         let active = targets.filter { $0.isEnabled }
         let values = active.compactMap { stats[$0.id] }.filter { $0.sampleCount > 0 }
         return values.min(by: { $0.score < $1.score })
     }
 
-    /// آمارِ مانیتورِ انتخاب‌شده برای نوار منو ("auto" = بدترین مانیتور).
+    /// Statistics of the monitor selected for the menu bar ("auto" = worst monitor).
     func menuBarStats(for sel: String) -> TargetStatistics? {
         if sel != "auto", let id = UUID(uuidString: sel),
            targets.contains(where: { $0.id == id }), let s = stats[id] {
@@ -314,7 +339,7 @@ final class MonitorViewModel: ObservableObject {
         return overallStatistics
     }
 
-    // MARK: - مدیریت اهداف
+    // MARK: - Target management
 
     func addTarget(_ target: PingTarget) {
         targets.append(target)
@@ -324,7 +349,7 @@ final class MonitorViewModel: ObservableObject {
     func updateTarget(_ target: PingTarget) {
         guard let idx = targets.firstIndex(where: { $0.id == target.id }) else { return }
         targets[idx] = target
-        alertStates[target.id] = nil   // ریست وضعیت هشدار پس از ویرایش
+        alertStates[target.id] = nil   // reset alert state after an edit
         saveTargets()
         requestNotificationPermissionIfNeeded()
     }
@@ -338,7 +363,7 @@ final class MonitorViewModel: ObservableObject {
         saveTargets()
     }
 
-    /// پاک‌کردن تاریخچه و آمارِ یک مانیتور (بدون حذف خودِ مانیتور).
+    /// Clears a monitor's history and statistics (without removing the monitor itself).
     func clearHistory(for target: PingTarget) {
         histories[target.id] = []
         stats[target.id] = .empty
@@ -346,16 +371,16 @@ final class MonitorViewModel: ObservableObject {
         alertStates[target.id] = nil
     }
 
-    // MARK: - ذخیره‌سازی محلی
+    // MARK: - Local persistence
 
     private func saveTargets() {
         if let data = try? JSONEncoder().encode(targets) {
-            UserDefaults.standard.set(data, forKey: storageKey)
+            UserDefaults.standard.set(data, forKey: DefaultsKey.savedTargets)
         }
     }
 
     private func loadTargets() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
+        guard let data = UserDefaults.standard.data(forKey: DefaultsKey.savedTargets),
               let decoded = try? JSONDecoder().decode([PingTarget].self, from: data) else { return }
         targets = decoded
     }

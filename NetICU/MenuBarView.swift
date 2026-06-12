@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// محتوای popover نوار منو: خلاصه‌ی همه‌ی مانیتورها + آی‌پی.
+/// Menu-bar popover content: summary of all monitors + IP.
 struct MenuBarView: View {
     @EnvironmentObject var vm: MonitorViewModel
     @EnvironmentObject var loc: Localizer
@@ -51,7 +51,7 @@ struct MenuBarView: View {
             Image(systemName: "network").font(.caption2).foregroundStyle(Theme.textSecondary)
             Text(loc.t("public_ip")).font(.caption2).foregroundStyle(.secondary)
             Spacer()
-            Text(vm.publicIP ?? "…")
+            Text(vm.publicIP ?? "—")
                 .font(.system(.caption, design: .monospaced))
                 .environment(\.layoutDirection, .leftToRight)
         }

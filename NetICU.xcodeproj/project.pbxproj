@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		42891A072FD72900005ABD59 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 428919B62FD7288D005ABD59 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 428919BD2FD7288D005ABD59;
+			remoteInfo = NetICU;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		428919BE2FD7288D005ABD59 /* NetICU.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NetICU.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		42891A022FD72900005ABD59 /* NetICUTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NetICUTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = NetICU;
 			sourceTree = "<group>";
 		};
+		42891A032FD72900005ABD59 /* NetICUTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = NetICUTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		428919BB2FD7288D005ABD59 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42891A052FD72900005ABD59 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				428919C02FD7288D005ABD59 /* NetICU */,
+				42891A032FD72900005ABD59 /* NetICUTests */,
 				428919BF2FD7288D005ABD59 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				428919BE2FD7288D005ABD59 /* NetICU.app */,
+				42891A022FD72900005ABD59 /* NetICUTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 428919BE2FD7288D005ABD59 /* NetICU.app */;
 			productType = "com.apple.product-type.application";
 		};
+		42891A012FD72900005ABD59 /* NetICUTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42891A0B2FD72900005ABD59 /* Build configuration list for PBXNativeTarget "NetICUTests" */;
+			buildPhases = (
+				42891A042FD72900005ABD59 /* Sources */,
+				42891A052FD72900005ABD59 /* Frameworks */,
+				42891A062FD72900005ABD59 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				42891A082FD72900005ABD59 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				42891A032FD72900005ABD59 /* NetICUTests */,
+			);
+			name = NetICUTests;
+			packageProductDependencies = (
+			);
+			productName = NetICUTests;
+			productReference = 42891A022FD72900005ABD59 /* NetICUTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -83,6 +131,10 @@
 					428919BD2FD7288D005ABD59 = {
 						CreatedOnToolsVersion = 26.5;
 						LastSwiftMigration = 2650;
+					};
+					42891A012FD72900005ABD59 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 428919BD2FD7288D005ABD59;
 					};
 				};
 			};
@@ -101,12 +153,20 @@
 			projectRoot = "";
 			targets = (
 				428919BD2FD7288D005ABD59 /* NetICU */,
+				42891A012FD72900005ABD59 /* NetICUTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		428919BC2FD7288D005ABD59 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		42891A062FD72900005ABD59 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -123,7 +183,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		42891A042FD72900005ABD59 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		42891A082FD72900005ABD59 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 428919BD2FD7288D005ABD59 /* NetICU */;
+			targetProxy = 42891A072FD72900005ABD59 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		428919C72FD7288F005ABD59 /* Debug */ = {
@@ -252,7 +327,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = 7C59W9244V;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -273,7 +348,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.internetqualityorg.NetICU;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -296,7 +371,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = 7C59W9244V;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -317,7 +392,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.internetqualityorg.NetICU;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -328,6 +403,47 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "NetICU/NetICU-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		42891A092FD72900005ABD59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				DEVELOPMENT_TEAM = 7C59W9244V;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.internetqualityorg.NetICUTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NetICU.app/Contents/MacOS/NetICU";
+			};
+			name = Debug;
+		};
+		42891A0A2FD72900005ABD59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10;
+				DEVELOPMENT_TEAM = 7C59W9244V;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.internetqualityorg.NetICUTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NetICU.app/Contents/MacOS/NetICU";
 			};
 			name = Release;
 		};
@@ -348,6 +464,15 @@
 			buildConfigurations = (
 				428919CA2FD7288F005ABD59 /* Debug */,
 				428919CB2FD7288F005ABD59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		42891A0B2FD72900005ABD59 /* Build configuration list for PBXNativeTarget "NetICUTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				42891A092FD72900005ABD59 /* Debug */,
+				42891A0A2FD72900005ABD59 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

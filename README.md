@@ -30,9 +30,14 @@ NetICU answers that by monitoring several targets **simultaneously** and breakin
 - **Public & local IP display** — see at a glance when your IP changes.
 - **Recent logs, history clearing, quality-score calibration, drag-to-sort monitors.**
 
+## Privacy & security notes
+
+- **Public-IP lookup is manual by default.** Showing your public IP requires asking a third-party service (`api.ipify.org`, `ifconfig.me`, or `icanhazip.com`). NetICU contacts them only when you press the refresh button on the dashboard — or every 5 minutes if you enable auto-refresh in Settings. No other data ever leaves your machine.
+- **TLS validation is bypassed only for raw-IP targets.** Probes to named hosts (e.g. `google.com`) use the system's normal certificate validation. Targets entered as a bare IP (e.g. `1.1.1.1`) skip validation, because public CAs rarely issue certificates for raw IPs and those targets would otherwise be unmeasurable over HTTPS. Probes carry no data — only timing is measured. Full threat model in [SECURITY.md](SECURITY.md).
+
 ## Installation
 
-Download `NetICU-1.4.1.zip` from the [Releases](https://github.com/aahonarmand/NetICU/releases) page, unzip it, and move `NetICU.app` to your Applications folder.
+Download `NetICU-1.5.0.zip` from the [Releases](https://github.com/aahonarmand/NetICU/releases) page, unzip it, and move `NetICU.app` to your Applications folder.
 
 > **First launch — "NetICU can't be opened":** the app is not yet notarized by Apple, so macOS Gatekeeper blocks it on first launch. To allow it:
 >
@@ -53,9 +58,10 @@ Download `NetICU-1.4.1.zip` from the [Releases](https://github.com/aahonarmand/N
    git clone https://github.com/aahonarmand/NetICU.git
    ```
 2. Open `NetICU.xcodeproj` in Xcode.
-3. Select the **NetICU** scheme and press ⌘R.
+3. In **Signing & Capabilities**, change the **Team** to your own (the committed team ID is the maintainer's and won't sign on your machine — a free "Personal Team" works).
+4. Select the **NetICU** scheme and press ⌘R. Run the unit tests with ⌘U.
 
-The project uses filesystem-synchronized groups (Xcode 16+), so any `.swift` file placed in the `NetICU/` folder is picked up automatically.
+The project uses filesystem-synchronized groups (Xcode 16+), so any `.swift` file placed in the `NetICU/` folder is picked up automatically. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## Architecture
 
@@ -83,6 +89,7 @@ The project uses filesystem-synchronized groups (Xcode 16+), so any `.swift` fil
 
 | Version | Highlights |
 |---|---|
+| 1.5.0 | Open-source readiness: English code comments throughout, unit tests (statistics, diagnosis, TLS gating), TLS validation bypassed only for raw-IP targets, manual/opt-in public-IP refresh, centralized UserDefaults keys, stable chart-point identity, unified probe timeout, CI workflow + CONTRIBUTING + SECURITY |
 | 1.4.1 | Code-quality release: full stats-window coverage at short intervals, session-leak fix, IP refresh stops with monitoring, thread-safe metrics collection, dead-code removal |
 | 1.4.0 | Fillable menu-bar gauge, quality calibration thresholds, outage chart-drop fix |
 | 1.3.0 | English-only UI, per-monitor proxy, server/network diagnosis, alert notifications, recent logs, clear history |
@@ -124,12 +131,12 @@ NetICU با مانیتورکردن **همزمان** چند مقصد به این 
 - **گِیج نوار منو** — دو عدد پینگ زنده، هر کدام برای یک مانیتور دلخواه، با رنگ وضعیت خودش.
 - **داشبورد** — نمای کلی همه‌ی مانیتورها با نمودار و درجه‌ی کیفیت A تا F.
 - **نوتیفیکیشن هشدار** — وقتی پینگ یک مقصد بیش از حد آستانه بالا بماند (تایم‌اوت هم حساب می‌شود) خبردار می‌شوی.
-- **نمایش IP عمومی و محلی** — تغییر IP را فوری می‌بینی.
+- **نمایش IP عمومی و محلی** — تغییر IP را فوری می‌بینی. (برای حریم خصوصی، IP عمومی به‌صورت پیش‌فرض فقط با دکمه‌ی رفرش گرفته می‌شود؛ رفرش خودکار هر ۵ دقیقه را می‌توانی در تنظیمات روشن کنی.)
 - **لاگ‌های اخیر، پاک‌کردن تاریخچه، تنظیم فرمول امتیاز، و مرتب‌سازی مانیتورها با کشیدن.**
 
 ## نصب
 
-فایل `NetICU-1.4.1.zip` را از صفحه‌ی [Releases](https://github.com/aahonarmand/NetICU/releases) دانلود کن، از حالت فشرده خارج کن و `NetICU.app` را به پوشه‌ی Applications منتقل کن.
+فایل `NetICU-1.5.0.zip` را از صفحه‌ی [Releases](https://github.com/aahonarmand/NetICU/releases) دانلود کن، از حالت فشرده خارج کن و `NetICU.app` را به پوشه‌ی Applications منتقل کن.
 
 > **اجرای اول — پیام «NetICU can't be opened»:** چون اپ هنوز notarize نشده، Gatekeeper مک جلوی اجرای اول را می‌گیرد. راه حل:
 >

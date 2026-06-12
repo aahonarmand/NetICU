@@ -21,7 +21,7 @@ Per-monitor proxy settings route probes through a user-specified local SOCKS5/HT
 
 ## Reporting a vulnerability
 
-If you find a security issue, please **do not open a public issue**. Email the maintainer instead: **soorira@gmail.com**. You should receive a response within a few days. Please include reproduction steps and the app version (`About → Version`).
+If you find a security issue, please **do not open a public issue**. Email the maintainer instead: **honarmand@gmail.com**. You should receive a response within a few days. Please include reproduction steps and the app version (`About → Version`).
 
 ## Supported versions
 
